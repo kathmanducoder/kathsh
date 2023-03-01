@@ -1,4 +1,4 @@
 ## kathshell
 
 ### Description
-A basic shell implementation in C.
+A basic UNIX shell implementation.
