@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     /* Allocate memory for command buffer */
     command = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
     if (command == NULL) {
-        perror("kathshell (malloc failed)");
+        perror("kathsh (malloc failed)");
         exit (EXIT_FAILURE);
     }
 

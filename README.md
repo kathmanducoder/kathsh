@@ -1,4 +1,4 @@
-## kathshell
+## kathsh
 
 ### Description
 A basic UNIX shell implementation.
@@ -7,8 +7,9 @@ A basic UNIX shell implementation.
 The project comes with a Makefile which will generate an executable called kathshell.
 
 ```
-➜  kathshell git:(main) ✗ make
-gcc -c kathshell.c -o kathshell.o
-gcc -o kathshell kathshell.o
-➜  kathshell git:(main) ✗ ./kathshell
+➜  kathsh git:(main) ✗ make
+gcc -c kathsh.c -o kathsh.o
+gcc -o kathsh kathsh.o
+➜  kathsh git:(main) ✗ ./kathsh 
+kathsh $
 ```
