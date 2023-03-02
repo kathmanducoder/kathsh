@@ -5,13 +5,20 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <string.h>
+#include <unistd.h>
 
 #define PROMPT  "kathsh $ "
 #define GOODBYE "Goodbye. Thanks for using kathsh."
 
+void sig_handler(int sig) {
+    write(STDOUT_FILENO, GOODBYE, strlen(GOODBYE));
+    write(STDOUT_FILENO, "\n", 1);
+    _exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[]) {
-    char             *command = NULL;
-    size_t    MAX_COMMAND_LENGTH = 100;
+    char            *command = NULL;
+    size_t          MAX_COMMAND_LENGTH = 100;
     size_t          num_chars_read = 0;
 
     /* Allocate memory for command buffer */
@@ -20,6 +27,9 @@ int main(int argc, char *argv[]) {
         perror("kathsh (malloc failed)");
         exit (EXIT_FAILURE);
     }
+
+    /* Register for SIGINT */
+    signal(SIGINT, sig_handler);
 
     while(1) {
         /* Print the prompt */
