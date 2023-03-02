@@ -38,6 +38,19 @@ int main(int argc, char *argv[]) {
             /* Empty command, nothing to do, flush the stdin and take input again */
             continue;
         }
+
+        /* Null terminate the command */
+        command[strlen(command) - 1] = '\0';
+
+        if(strcmp(command, "quit") == 0 ||
+           strcmp(command, "quit()") == 0 ||
+           strcmp(command, "exit") == 0 ||
+           strcmp(command, "exit()") == 0 ||
+           strcmp(command, "q") == 0) {
+            /* Check for common quit inputs */
+            printf("%s\n", GOODBYE);
+            return 0;
+           }
     }
     return 0;
 }
