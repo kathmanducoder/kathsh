@@ -1,9 +1,9 @@
-ashell: ashell.o
-	gcc -o ashell ashell.o
+kathshell: kathshell.o
+	gcc -o kathshell kathshell.o
 
-ashell.o: ashell.c
-	gcc -c ashell.c -o ashell.o
+kathshell.o: kathshell.c
+	gcc -c kathshell.c -o kathshell.o
 
 clean:
-	rm -f ashell *.o
+	rm -f kathshell *.o
 
