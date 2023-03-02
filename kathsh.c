@@ -8,9 +8,9 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define PROMPT      "kathsh $ "
-#define GOODBYE     "Goodbye. Thanks for using kathsh."
-#define MAX_ARGS    10
+#define PROMPT              "kathsh $ "
+#define GOODBYE             "Goodbye. Thanks for using kathsh."
+#define MAX_COMMAND_ARGS    10
 
 void sig_handler(int sig) {
     write(STDOUT_FILENO, "\n", 1);
@@ -19,86 +19,118 @@ void sig_handler(int sig) {
     _exit(EXIT_SUCCESS);
 }
 
-void exec_command(char *command) {
+int init_shell() {
+    /* Register for SIGINT */
+    signal(SIGINT, sig_handler);
+
+    return 0;
+}
+
+int parse_command(char **command, char *args_list[], int *pipe_index) {
     int     index = 0;
     char    *token = NULL;
-    char    *args_list[MAX_ARGS];
 
-    token = strtok(command, " ");
+    token = strtok(*command, " ");
     while (token != NULL) {
         args_list[index++] = token;
+        if (strcmp(token, "|") == 0) {
+            /* There is a pipe in the command */
+            *pipe_index = 1;
+        }
         token = strtok(NULL, " ");
     }
     args_list[index] = NULL;
 
-    if(execvp(args_list[0], args_list) == -1) {
-        perror("kathsh (execve failed)");
-    }
-    fflush(stdout);
-
+    return 0;
 }
 
-int main(int argc, char *argv[]) {
-    char            *command = NULL;
-    size_t          MAX_COMMAND_LENGTH = 100;
-    size_t          num_chars_read = 0;
+void exec_command(char *args_list[]) {
     pid_t           pid;
-    int             status = 0;
+    int             pid_status = 0;
 
-    /* Allocate memory for command buffer */
-    command = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
-    if (command == NULL) {
-        perror("kathsh (malloc failed)");
-        exit (EXIT_FAILURE);
+    pid = fork();
+    if (pid == -1) {
+        perror("kathsh (fork failure)");
+        return;
     }
 
-    /* Register for SIGINT */
-    signal(SIGINT, sig_handler);
+    if(pid) {
+        /* parent process. just wait on the child. */
+        while(wait(&pid_status) > 0);
+    } else {
+        /* Child process. Execute the command.*/
+        if(execvp(args_list[0], args_list) == -1) {
+            perror("kathsh (execve failed)");
+        }
+        fflush(stdout);
+    }
+}
+
+void check_exit_inputs(char **command) {
+    if(strcmp(*command, "quit") == 0 ||
+       strcmp(*command, "quit()") == 0 ||
+       strcmp(*command, "exit") == 0 ||
+       strcmp(*command, "exit()") == 0 ||
+       strcmp(*command, "q") == 0) {
+        /* Check for common quit inputs */
+        printf("%s\n", GOODBYE);
+        free(*command);
+        exit(EXIT_SUCCESS);
+    }
+}
+
+void shell_loop() {
+    char            *command = NULL;
+    size_t          command_len = 0;
+    size_t          MAX_COMMAND_LEN = 10;
+    int             pipe_index = 0;
+    char            *args_list[MAX_COMMAND_ARGS];
+
+    /* Allocate memory for command buffer */
+    if((command = (char *) malloc(MAX_COMMAND_LEN * sizeof(char))) == NULL) {
+        perror("kathsh (malloc failed)");
+        exit(EXIT_FAILURE);
+    }
 
     while(1) {
         /* Print the prompt */
         printf("%s", PROMPT);
 
         /* Read the command from stdin */
-        num_chars_read = getline(&command, &MAX_COMMAND_LENGTH, stdin);
-
-        if (num_chars_read == -1) {
+        command_len = getline(&command, &MAX_COMMAND_LEN, stdin);
+        if (command_len == -1) {
             /* EOF like Cltr + D */
             printf("\n%s\n", GOODBYE);
+            free(command);
             exit (EXIT_SUCCESS);
         }
-
-        if (num_chars_read == 0) {
+        if (command_len == 0) {
             /* Empty command, nothing to do, flush the stdin and take input again */
             continue;
         }
-
         /* Null terminate the command */
         command[strlen(command) - 1] = '\0';
 
-        if(strcmp(command, "quit") == 0 ||
-           strcmp(command, "quit()") == 0 ||
-           strcmp(command, "exit") == 0 ||
-           strcmp(command, "exit()") == 0 ||
-           strcmp(command, "q") == 0) {
-            /* Check for common quit inputs */
-            printf("%s\n", GOODBYE);
-            return 0;
+        check_exit_inputs(&command);
+
+        if(parse_command(&command, args_list, &pipe_index) != 0) {
+            free(command);
+            exit(EXIT_FAILURE);
         }
 
-        pid = fork();
-        if (pid == -1) {
-            perror("kathsh (fork failure)");
-            continue;
-        }
-
-        if(pid) {
-            /* parent process. just wait on the child. */
-            while(wait(&status) > 0);
-        } else {
-            /* Child process. Execute the command.*/
-            exec_command(command);
+        if (!pipe_index) {
+            exec_command(args_list);
         }
     }
+}
+
+int main(int argc, char *argv[]) {
+    size_t          MAX_COMMAND_LEN = 100;
+    char            *command;
+
+    init_shell();
+
+    shell_loop();
+
     return 0;
 }
