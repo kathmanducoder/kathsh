@@ -1,10 +1,10 @@
 ## kathsh
 
 ### Description
-A basic UNIX shell implementation.
+Building my own UNIX shell.
 
 ### Installation
-The project comes with a Makefile which will generate an executable called kathshell.
+The project comes with a Makefile which will generate an executable called kathsh.
 
 ```
 ➜  kathsh git:(main) ✗ make
