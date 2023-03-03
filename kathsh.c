@@ -26,20 +26,37 @@ int init_shell() {
     return 0;
 }
 
-int parse_command(char **command, char *args_list[], int *pipe_index) {
+int parse_command(char **command, char *args_list[], char *piped_args_list[], int *is_piped) {
     int     index = 0;
+    int     piped_args_index = 0;
+    int     pipe_cnt = 0;
     char    *token = NULL;
 
     token = strtok(*command, " ");
     while (token != NULL) {
-        args_list[index++] = token;
+        if (*is_piped) {
+            piped_args_list[piped_args_index++] = token;
+        } else {
+            args_list[index++] = token;
+        }
         if (strcmp(token, "|") == 0) {
             /* There is a pipe in the command */
-            *pipe_index = 1;
+            *is_piped = 1;
+            pipe_cnt += 1;
         }
         token = strtok(NULL, " ");
+        if(pipe_cnt > 1) {
+            break;
+        }
     }
+
+    if (pipe_cnt > 1) {
+        printf("kathsh (cannot handle multiple pipes)\n");
+        return 1;
+    }
+
     args_list[index] = NULL;
+    piped_args_list[piped_args_index] = NULL;
 
     return 0;
 }
@@ -66,6 +83,10 @@ void exec_command(char *args_list[]) {
     }
 }
 
+void exec_piped_command(char *args_list[], char *piped_args_list[]) {
+
+}
+
 void check_exit_inputs(char **command) {
     if(strcmp(*command, "quit") == 0 ||
        strcmp(*command, "quit()") == 0 ||
@@ -83,8 +104,9 @@ void shell_loop() {
     char            *command = NULL;
     size_t          command_len = 0;
     size_t          MAX_COMMAND_LEN = 10;
-    int             pipe_index = 0;
     char            *args_list[MAX_COMMAND_ARGS];
+    char            *piped_args_list[MAX_COMMAND_ARGS];
+    int             is_piped = 0;
 
     /* Allocate memory for command buffer */
     if((command = (char *) malloc(MAX_COMMAND_LEN * sizeof(char))) == NULL) {
@@ -113,23 +135,23 @@ void shell_loop() {
 
         check_exit_inputs(&command);
 
-        if(parse_command(&command, args_list, &pipe_index) != 0) {
+        if(parse_command(&command, args_list, piped_args_list, &is_piped) != 0) {
             free(command);
-            exit(EXIT_FAILURE);
+            continue;
         }
 
-        if (!pipe_index) {
+        if (!is_piped) {
+            /* This is a non-pipe command */
             exec_command(args_list);
+        } else {
+            /* This command has one pipe */
+            exec_piped_command(args_list, piped_args_list);
         }
     }
 }
 
 int main(int argc, char *argv[]) {
-    size_t          MAX_COMMAND_LEN = 100;
-    char            *command;
-
     init_shell();
-
     shell_loop();
 
     return 0;
