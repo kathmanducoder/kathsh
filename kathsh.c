@@ -5,8 +5,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <string.h>
-#include <pthread.h>
+#include <sys/wait.h>
 #include <unistd.h>
+
 
 #define PROMPT              "kathsh $ "
 #define GOODBYE             "Goodbye. Thanks for using kathsh."
@@ -82,7 +83,7 @@ void exec_command(char *args_list[]) {
 
     if(pid) {
         /* parent process. just wait on the child. */
-        while(wait(&pid_status) > 0);
+        wait(NULL);
     } else {
         /* Child process. Execute the command.*/
         if(execvp(args_list[0], args_list) == -1) {
@@ -94,8 +95,8 @@ void exec_command(char *args_list[]) {
 }
 
 void exec_piped_command(char *args_list[], char *piped_args_list[]) {
-    int fds[2];
-    pid_t command_pid, piped_command_pid;
+    int         fds[2];
+    pid_t       command_pid, piped_command_pid;
 
     if(pipe(fds) < 0) {
         perror("kathsh (pipe failed)");
@@ -121,20 +122,28 @@ void exec_piped_command(char *args_list[], char *piped_args_list[]) {
             return;
         }
     } else {
+        /* parent process. */
         if((piped_command_pid = fork()) < 0) {
             perror("kathsh (fork failed)");
             return;
         }
 
-        /* fds[1] is the write end of the pipe. The piped command
-           only needs the read end, so close fds[1] */
-        close(fds[1]);
-        dup2(fds[0], STDIN_FILENO);
-        close(fds[1]);
-
-        if(execvp(piped_args_list[0], piped_args_list) == -1) {
-            perror("kathsh (execve failed - piped command)");
-            return;
+        if(piped_command_pid == 0) {
+            /* fds[1] is the write end of the pipe. The piped command
+            only needs the read end, so close fds[1] */
+            close(fds[1]);
+            dup2(fds[0], STDIN_FILENO);
+            close(fds[0]);
+            if(execvp(piped_args_list[0], piped_args_list) == -1) {
+                perror("kathsh (execve failed - piped command)");
+                return;
+            }
+        } else {
+            /* Wait for both the children to stop */
+            wait(NULL);
+            wait(NULL);
+            close(fds[0]);
+            close(fds[1]);
         }
     }
 }
@@ -176,7 +185,7 @@ void shell_loop() {
             /* EOF like Cltr + D */
             printf("\n%s\n", GOODBYE);
             free(command);
-            exit (EXIT_SUCCESS);
+            _exit (EXIT_SUCCESS);
         }
         if (command_len == 0) {
             /* Empty command, nothing to do, flush the stdin and take input again */
