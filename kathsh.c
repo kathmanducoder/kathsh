@@ -23,6 +23,9 @@ int init_shell() {
     /* Register for SIGINT */
     signal(SIGINT, sig_handler);
 
+    printf("\n");
+    printf("Welcome to kathsh");
+    printf("\n");
     return 0;
 }
 
@@ -51,7 +54,7 @@ int parse_command(char **command, char *args_list[], char *piped_args_list[], in
     }
 
     if (pipe_cnt > 1) {
-        printf("kathsh (cannot handle multiple pipes)\n");
+        printf("kathsh ~> max supported pipe count is 1\n");
         return 1;
     }
 
