@@ -46,6 +46,12 @@ int parse_command(char **command, char *args_list[], char *piped_args_list[], in
             /* There is a pipe in the command */
             *is_piped = 1;
             pipe_cnt += 1;
+
+            /*
+             * Decrement previously incremented index by 1 since
+             * this is the pipe character.
+             */
+            index -= 1;
         }
         token = strtok(NULL, " ");
         if(pipe_cnt > 1) {
@@ -81,13 +87,56 @@ void exec_command(char *args_list[]) {
         /* Child process. Execute the command.*/
         if(execvp(args_list[0], args_list) == -1) {
             perror("kathsh (execve failed)");
+            return;
         }
         fflush(stdout);
     }
 }
 
 void exec_piped_command(char *args_list[], char *piped_args_list[]) {
+    int fds[2];
+    pid_t command_pid, piped_command_pid;
 
+    if(pipe(fds) < 0) {
+        perror("kathsh (pipe failed)");
+        return;
+    }
+
+    if((command_pid = fork()) < 0) {
+        perror("kathsh (fork failed)");
+        return;
+    }
+
+    if (command_pid == 0) {
+        /* Child process to execute first command */
+
+        /* fds[0] is the read end of the pipe. The first command
+           only needs the write end, so close fds[0] */
+        close(fds[0]);
+        dup2(fds[1], STDOUT_FILENO);
+        close(fds[1]);
+
+        if(execvp(args_list[0], args_list) == -1) {
+            perror("kathsh (execve failed - first command)");
+            return;
+        }
+    } else {
+        if((piped_command_pid = fork()) < 0) {
+            perror("kathsh (fork failed)");
+            return;
+        }
+
+        /* fds[1] is the write end of the pipe. The piped command
+           only needs the read end, so close fds[1] */
+        close(fds[1]);
+        dup2(fds[0], STDIN_FILENO);
+        close(fds[1]);
+
+        if(execvp(piped_args_list[0], piped_args_list) == -1) {
+            perror("kathsh (execve failed - piped command)");
+            return;
+        }
+    }
 }
 
 void check_exit_inputs(char **command) {
@@ -151,6 +200,7 @@ void shell_loop() {
             exec_piped_command(args_list, piped_args_list);
         }
     }
+    free(command);
 }
 
 int main(int argc, char *argv[]) {
