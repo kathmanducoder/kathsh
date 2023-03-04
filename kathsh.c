@@ -135,13 +135,13 @@ void exec_piped_command(char *args_list[], char *piped_args_list[]) {
                 perror("kathsh (execve failed - piped command)");
             }
         } else {
-            /* Wait for both the children to stop */
-            wait(NULL);
-            wait(NULL);
-
             /* Close the fds in parent */
             close(fds[0]);
             close(fds[1]);
+
+            /* Wait for both the children to stop */
+            wait(NULL);
+            wait(NULL);
         }
     }
 }
