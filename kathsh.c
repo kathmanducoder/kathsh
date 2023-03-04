@@ -90,7 +90,6 @@ void exec_command(char *args_list[]) {
             perror("kathsh (execve failed)");
             return;
         }
-        fflush(stdout);
     }
 }
 
