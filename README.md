@@ -15,3 +15,6 @@ gcc -o kathsh kathsh.o
 Welcome to kathsh
 kathsh $
 ```
+
+### Demo Screenshot
+![Screenshot](https://user-images.githubusercontent.com/125407887/222878203-034ef1f9-bbb8-4922-b75f-0872b2d90251.png)
