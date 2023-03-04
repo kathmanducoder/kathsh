@@ -88,7 +88,6 @@ void exec_command(char *args_list[]) {
         /* Child process. Execute the command.*/
         if(execvp(args_list[0], args_list) == -1) {
             perror("kathsh (execve failed)");
-            return;
         }
     }
 }
@@ -118,7 +117,6 @@ void exec_piped_command(char *args_list[], char *piped_args_list[]) {
 
         if(execvp(args_list[0], args_list) == -1) {
             perror("kathsh (execve failed - first command)");
-            return;
         }
     } else {
         /* parent process. */
@@ -135,7 +133,6 @@ void exec_piped_command(char *args_list[], char *piped_args_list[]) {
             close(fds[0]);
             if(execvp(piped_args_list[0], piped_args_list) == -1) {
                 perror("kathsh (execve failed - piped command)");
-                return;
             }
         } else {
             /* Wait for both the children to stop */
@@ -147,18 +144,18 @@ void exec_piped_command(char *args_list[], char *piped_args_list[]) {
     }
 }
 
-void check_exit_inputs(char **command) {
-    if(strcmp(*command, "quit") == 0 ||
-       strcmp(*command, "quit()") == 0 ||
-       strcmp(*command, "exit") == 0 ||
-       strcmp(*command, "exit()") == 0 ||
-       strcmp(*command, "q") == 0) {
-        /* Check for common quit inputs */
-        printf("%s\n", GOODBYE);
-        free(*command);
-        exit(EXIT_SUCCESS);
+int check_exit_inputs(char *command) {
+    if(strcmp(command, "quit") == 0 ||
+       strcmp(command, "quit()") == 0 ||
+       strcmp(command, "exit") == 0 ||
+       strcmp(command, "exit()") == 0 ||
+       strcmp(command, "q") == 0) {
+        return 0;
     }
+
+    return 1;
 }
+
 
 void shell_loop() {
     char            *command = NULL;
@@ -168,13 +165,12 @@ void shell_loop() {
     char            *piped_args_list[MAX_COMMAND_ARGS];
     int             is_piped = 0;
 
-    /* Allocate memory for command buffer */
-    if((command = (char *) malloc(MAX_COMMAND_LEN * sizeof(char))) == NULL) {
-        perror("kathsh (malloc failed)");
-        exit(EXIT_FAILURE);
-    }
-
     while(1) {
+        /* Allocate memory for command buffer */
+        if((command = (char *) malloc(MAX_COMMAND_LEN * sizeof(char))) == NULL) {
+            perror("kathsh (malloc failed)");
+            exit(EXIT_FAILURE);
+        }
         /* Print the prompt */
         printf("%s", PROMPT);
 
@@ -184,7 +180,7 @@ void shell_loop() {
             /* EOF like Cltr + D */
             printf("\n%s\n", GOODBYE);
             free(command);
-            _exit (EXIT_SUCCESS);
+            exit (EXIT_SUCCESS);
         }
         if (command_len == 0) {
             /* Empty command, nothing to do, flush the stdin and take input again */
@@ -193,7 +189,11 @@ void shell_loop() {
         /* Null terminate the command */
         command[strlen(command) - 1] = '\0';
 
-        check_exit_inputs(&command);
+        if(check_exit_inputs(command) == 0) {
+            printf("\n%s\n", GOODBYE);
+            free(command);
+            exit (EXIT_SUCCESS);
+        }
 
         if(parse_command(&command, args_list, piped_args_list, &is_piped) != 0) {
             free(command);
@@ -207,8 +207,9 @@ void shell_loop() {
             /* This command has one pipe */
             exec_piped_command(args_list, piped_args_list);
         }
+        free(command);
     }
-    free(command);
+
 }
 
 int main(int argc, char *argv[]) {
