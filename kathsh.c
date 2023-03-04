@@ -138,6 +138,8 @@ void exec_piped_command(char *args_list[], char *piped_args_list[]) {
             /* Wait for both the children to stop */
             wait(NULL);
             wait(NULL);
+
+            /* Close the fds in parent */
             close(fds[0]);
             close(fds[1]);
         }
@@ -163,9 +165,13 @@ void shell_loop() {
     size_t          MAX_COMMAND_LEN = 10;
     char            *args_list[MAX_COMMAND_ARGS];
     char            *piped_args_list[MAX_COMMAND_ARGS];
-    int             is_piped = 0;
+    int             is_piped;
 
     while(1) {
+        is_piped = 0;
+        memset(args_list, 0, MAX_COMMAND_ARGS);
+        memset(piped_args_list, 0, MAX_COMMAND_ARGS);
+
         /* Allocate memory for command buffer */
         if((command = (char *) malloc(MAX_COMMAND_LEN * sizeof(char))) == NULL) {
             perror("kathsh (malloc failed)");
