@@ -1,7 +1,7 @@
 ## kathsh
 
 ### Description
-Implementation of a custom UNIX shell that supports one pipe redirection.
+Implementation of a custom UNIX shell that supports up to one level of pipe redirection.
 
 ### Installation
 The project comes with a Makefile which will generate an executable called kathsh.
